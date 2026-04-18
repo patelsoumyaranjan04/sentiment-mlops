@@ -1,0 +1,80 @@
+# =============================================================
+# Central Project Configuration
+# sentiment-mlops
+# =============================================================
+
+project:
+  name: "amazon-sentiment-mlops"
+  version: "1.0.0"
+  description: "Amazon Reviews Binary Sentiment Classification with MLOps"
+
+# ---------------------------------------------------------------
+# Data Paths
+# ---------------------------------------------------------------
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  raw_file: "data/raw/Amazon_review.csv"
+  processed_train: "data/processed/train.csv"
+  processed_test: "data/processed/test.csv"
+  processed_val: "data/processed/val.csv"
+
+# ---------------------------------------------------------------
+# Preprocessing
+# ---------------------------------------------------------------
+preprocessing:
+  test_size: 0.20
+  val_size: 0.10
+  random_state: 42
+  max_sequence_length: 64
+  tokenizer_save_path: "data/processed/tokenizer.pkl"
+
+# ---------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------
+model:
+  embedding_dim: 64
+  lstm_units: 100
+  dense_units: 128
+  dropout: 0.0
+  recurrent_dropout: 0.0
+  output_activation: "sigmoid"
+  loss: "binary_crossentropy"
+  optimizer: "adam"
+  metrics:
+    - "accuracy"
+  batch_size: 64
+  epochs: 10
+  early_stopping_patience: 5
+  model_save_path: "data/processed/bilstm_model"
+
+# ---------------------------------------------------------------
+# MLflow
+# ---------------------------------------------------------------
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "amazon-sentiment-bilstm"
+  registered_model_name: "SentimentBiLSTM"
+
+# ---------------------------------------------------------------
+# API
+# ---------------------------------------------------------------
+api:
+  host: "0.0.0.0"
+  port: 8000
+  model_uri: "models:/SentimentBiLSTM/Production"
+
+# ---------------------------------------------------------------
+# Monitoring
+# ---------------------------------------------------------------
+monitoring:
+  prometheus_port: 8001
+  drift_threshold: 0.05
+  error_rate_threshold: 0.05
+
+# ---------------------------------------------------------------
+# Airflow
+# ---------------------------------------------------------------
+airflow:
+  dag_id: "sentiment_data_pipeline"
+  schedule_interval: "@daily"
