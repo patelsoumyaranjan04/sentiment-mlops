@@ -1,0 +1,39 @@
+# mlflow_project/MLproject
+# --------------------------------------------------------
+# MLflow Project definition.
+# Run from project root:
+#   mlflow run mlflow_project/ -P epochs=10 -P batch_size=64
+# --------------------------------------------------------
+
+name: amazon-sentiment-bilstm
+
+conda_env: mlflow_project/conda.yaml
+
+entry_points:
+
+  main:
+    parameters:
+      epochs:          {type: int,   default: 10}
+      batch_size:      {type: int,   default: 64}
+      lstm_units:      {type: int,   default: 100}
+      embedding_dim:   {type: int,   default: 64}
+      dense_units:     {type: int,   default: 128}
+      dropout:         {type: float, default: 0.3}
+      max_seq_length:  {type: int,   default: 64}
+      patience:        {type: int,   default: 5}
+    command: >
+      python -m src.models.train
+        --epochs {epochs}
+        --batch_size {batch_size}
+        --lstm_units {lstm_units}
+        --embedding_dim {embedding_dim}
+        --dense_units {dense_units}
+        --dropout {dropout}
+        --max_seq_length {max_seq_length}
+        --patience {patience}
+
+  preprocess:
+    command: python -m src.data.preprocess
+
+  ingest:
+    command: python -m src.data.ingest

@@ -1,0 +1,101 @@
+# docker-compose.yml (project root)
+# --------------------------------------------------------
+# All services: frontend, backend, mlflow, prometheus,
+# grafana. Run with:  docker compose up --build
+# --------------------------------------------------------
+
+version: "3.8"
+
+services:
+
+  # ---- 1. FastAPI Inference Backend ----
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: sentiment-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/processed:/app/data/processed:ro
+      - ./configs:/app/configs:ro
+      - ./mlruns:/app/mlruns:ro
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - mlflow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # ---- 2. React Frontend ----
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: sentiment-frontend
+    ports:
+      - "3002:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ---- 3. MLflow Tracking Server ----
+  mlflow:
+    image: python:3.10-slim
+    container_name: sentiment-mlflow
+    command: >
+      bash -c "pip install mlflow==2.8.1 -q &&
+               mlflow server
+               --host 0.0.0.0
+               --port 5000
+               --backend-store-uri /mlflow/mlruns
+               --default-artifact-root /mlflow/artifacts"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlflow/mlruns
+      - mlflow_artifacts:/mlflow/artifacts
+    restart: unless-stopped
+
+  # ---- 4. Prometheus ----
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: sentiment-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+
+  # ---- 5. Grafana ----
+  grafana:
+    image: grafana/grafana:10.1.5
+    container_name: sentiment-grafana
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  mlflow_artifacts:

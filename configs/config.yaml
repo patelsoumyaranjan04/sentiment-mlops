@@ -26,26 +26,26 @@ preprocessing:
   test_size: 0.20
   val_size: 0.10
   random_state: 42
-  max_sequence_length: 64
+  max_sequence_length: 128
   tokenizer_save_path: "data/processed/tokenizer.pkl"
 
 # ---------------------------------------------------------------
 # Model
 # ---------------------------------------------------------------
 model:
-  embedding_dim: 64
-  lstm_units: 100
-  dense_units: 128
-  dropout: 0.0
-  recurrent_dropout: 0.0
+  embedding_dim: 128
+  lstm_units: 128
+  dense_units: 64
+  dropout: 0.3
+  recurrent_dropout: 0.2
   output_activation: "sigmoid"
   loss: "binary_crossentropy"
   optimizer: "adam"
   metrics:
     - "accuracy"
-  batch_size: 64
-  epochs: 10
-  early_stopping_patience: 5
+  batch_size: 128
+  epochs: 15
+  early_stopping_patience: 3
   model_save_path: "data/processed/bilstm_model"
 
 # ---------------------------------------------------------------

@@ -1,0 +1,29 @@
+# docker/prometheus.yml
+# --------------------------------------------------------
+# Prometheus scrape configuration
+# --------------------------------------------------------
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+
+  # Sentiment API (FastAPI + prometheus-fastapi-instrumentator)
+  - job_name: "sentiment_api"
+    static_configs:
+      - targets: ["backend:8000"]
+    metrics_path: "/metrics"
+
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

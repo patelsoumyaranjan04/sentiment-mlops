@@ -1,0 +1,52 @@
+# dvc.yaml
+# --------------------------------------------------------
+# DVC pipeline — mirrors the Airflow DAG for reproducibility.
+# Run with:  dvc repro
+# Visualize: dvc dag
+# --------------------------------------------------------
+
+stages:
+
+  ingest:
+    cmd: python -m src.data.ingest
+    deps:
+      - src/data/ingest.py
+      - src/utils/config_loader.py
+      - configs/config.yaml
+      - data/raw/Amazon_review.csv
+    outs:
+      - data/raw/Amazon_review_validated.csv:
+          cache: true
+          persist: false
+
+  preprocess:
+    cmd: python -m src.data.preprocess
+    deps:
+      - src/data/preprocess.py
+      - src/utils/config_loader.py
+      - configs/config.yaml
+      - data/raw/Amazon_review_validated.csv
+    outs:
+      - data/processed/train.csv:
+          cache: true
+      - data/processed/val.csv:
+          cache: true
+      - data/processed/test.csv:
+          cache: true
+      - data/processed/X_train.npy:
+          cache: true
+      - data/processed/X_val.npy:
+          cache: true
+      - data/processed/X_test.npy:
+          cache: true
+      - data/processed/y_train.npy:
+          cache: true
+      - data/processed/y_val.npy:
+          cache: true
+      - data/processed/y_test.npy:
+          cache: true
+      - data/processed/tokenizer.pkl:
+          cache: true
+    metrics:
+      - data/processed/baseline_stats.json:
+          cache: false

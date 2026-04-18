@@ -1,0 +1,90 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m src.data.ingest
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 5698a6e64bfc3f4d4312b040705f6791
+      size: 2412
+    - path: data/raw/Amazon_review.csv
+      hash: md5
+      md5: 27456d0c58b4a052fe37570e45c0abd6
+      size: 42063909
+    - path: src/data/ingest.py
+      hash: md5
+      md5: 32a366e41e1c9f4bf5c5c479c86e2439
+      size: 2477
+    - path: src/utils/config_loader.py
+      hash: md5
+      md5: 97943fa3d32f67470122ee5c65449ac0
+      size: 679
+    outs:
+    - path: data/raw/Amazon_review_validated.csv
+      hash: md5
+      md5: f6b5dd21a06a0d091223f1815efc7c44
+      size: 41287662
+  preprocess:
+    cmd: python -m src.data.preprocess
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 5698a6e64bfc3f4d4312b040705f6791
+      size: 2412
+    - path: data/raw/Amazon_review_validated.csv
+      hash: md5
+      md5: f6b5dd21a06a0d091223f1815efc7c44
+      size: 41287662
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: 2cb887e6b5905124dc8c9c9111d0bd5c
+      size: 6381
+    - path: src/utils/config_loader.py
+      hash: md5
+      md5: 97943fa3d32f67470122ee5c65449ac0
+      size: 679
+    outs:
+    - path: data/processed/X_test.npy
+      hash: md5
+      md5: c2633d3b243d526ebdb02b1c19662ae6
+      size: 5161088
+    - path: data/processed/X_train.npy
+      hash: md5
+      md5: 8321ddd2c6c594f8f32c0bd104781bcf
+      size: 18062464
+    - path: data/processed/X_val.npy
+      hash: md5
+      md5: 251e9c537d185194ef8418c98a031d82
+      size: 2580608
+    - path: data/processed/baseline_stats.json
+      hash: md5
+      md5: f57f5db6b1e72504f3aef6fb43fc988e
+      size: 199
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 574cfa324fdb0005a0ac04b56992e9a8
+      size: 5029271
+    - path: data/processed/tokenizer.pkl
+      hash: md5
+      md5: 71e0e11143634700e40ae2c03297daf6
+      size: 3624356
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 7f9ee204d0cf630b7fafd1f5fc948d71
+      size: 17423784
+    - path: data/processed/val.csv
+      hash: md5
+      md5: 72568c5fc91945721a277bf8baf787ac
+      size: 2502944
+    - path: data/processed/y_test.npy
+      hash: md5
+      md5: 52283ea8a1bb88b8edf9e8d73d6d9e27
+      size: 161408
+    - path: data/processed/y_train.npy
+      hash: md5
+      md5: 8da79f9c70088acb086082f4912515a8
+      size: 564576
+    - path: data/processed/y_val.npy
+      hash: md5
+      md5: 44e87dd621542cc2c8b786f39aeb9619
+      size: 80768

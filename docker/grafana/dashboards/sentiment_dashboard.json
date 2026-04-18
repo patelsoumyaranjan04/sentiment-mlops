@@ -1,0 +1,79 @@
+{
+  "title": "Sentiment API Monitoring",
+  "uid": "sentiment-mlops",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "title": "Total Predictions",
+      "targets": [{ "expr": "sum(sentiment_predictions_total)", "legendFormat": "Total" }],
+      "options": { "colorMode": "background", "graphMode": "area" }
+    },
+    {
+      "id": 2, "type": "stat", "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "title": "Positive Predictions",
+      "targets": [{ "expr": "sentiment_predictions_total{sentiment='positive'}", "legendFormat": "Positive" }],
+      "options": { "colorMode": "background" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" } } }
+    },
+    {
+      "id": 3, "type": "stat", "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "title": "Negative Predictions",
+      "targets": [{ "expr": "sentiment_predictions_total{sentiment='negative'}", "legendFormat": "Negative" }],
+      "options": { "colorMode": "background" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "red", "mode": "fixed" } } }
+    },
+    {
+      "id": 4, "type": "gauge", "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "title": "Positive Ratio",
+      "targets": [{ "expr": "sentiment_positive_ratio * 100", "legendFormat": "%" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 100, "unit": "percent",
+          "thresholds": {
+            "steps": [
+              { "color": "red",    "value": 0   },
+              { "color": "yellow", "value": 10  },
+              { "color": "green",  "value": 30  },
+              { "color": "yellow", "value": 70  },
+              { "color": "red",    "value": 90  }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5, "type": "timeseries", "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "title": "Prediction Rate (req/s)",
+      "targets": [
+        { "expr": "rate(sentiment_predictions_total{sentiment='positive'}[1m])", "legendFormat": "Positive/s" },
+        { "expr": "rate(sentiment_predictions_total{sentiment='negative'}[1m])", "legendFormat": "Negative/s" }
+      ]
+    },
+    {
+      "id": 6, "type": "timeseries", "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "title": "Inference Latency (p50 / p95 / p99)",
+      "targets": [
+        { "expr": "histogram_quantile(0.50, rate(sentiment_prediction_latency_seconds_bucket[5m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(sentiment_prediction_latency_seconds_bucket[5m]))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, rate(sentiment_prediction_latency_seconds_bucket[5m]))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 7, "type": "timeseries", "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "title": "HTTP Request Rate",
+      "targets": [
+        { "expr": "rate(http_requests_total{job='sentiment_api'}[1m])", "legendFormat": "{{method}} {{handler}} {{status}}" }
+      ]
+    },
+    {
+      "id": 8, "type": "heatmap", "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "title": "Input Review Length Distribution",
+      "targets": [{ "expr": "rate(sentiment_input_length_words_bucket[5m])", "legendFormat": "{{le}}" }]
+    }
+  ]
+}

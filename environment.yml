@@ -45,3 +45,4 @@ dependencies:
       - requests==2.31.0
       - tqdm==4.66.1
       - loguru==0.7.2
+      - email-validator>=2.0.0

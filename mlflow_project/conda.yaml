@@ -1,0 +1,18 @@
+# mlflow_project/conda.yaml
+name: sentiment-mlops
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - tensorflow==2.13.0
+      - scikit-learn==1.3.2
+      - numpy==1.24.3
+      - pandas==2.0.3
+      - nltk==3.8.1
+      - emoji==2.8.0
+      - mlflow==2.8.1
+      - loguru==0.7.2
+      - pyyaml==6.0.1
