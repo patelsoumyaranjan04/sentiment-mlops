@@ -1,18 +1,34 @@
-# requirements.backend.txt
-tensorflow==2.13.0
-scikit-learn==1.3.2
-numpy==1.24.3
-pandas==2.0.3
-nltk==3.8.1
-emoji==2.8.0
-mlflow==2.8.1
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.4.2
-prometheus-client==0.19.0
-prometheus-fastapi-instrumentator==6.1.0
-loguru==0.7.2
-pyyaml==6.0.1
-python-dotenv==1.0.0
-httpx==0.25.2
+# Pin typing-extensions first — resolves tensorflow vs fastapi conflict
+typing-extensions
+
+# Core ML — tensorflow-cpu keeps Docker image smaller, no GPU needed for inference
+tensorflow-cpu==2.13.0
+scikit-learn
+numpy
+pandas
+
+# NLP
+nltk
+emoji
+
+# MLOps
+mlflow
+
+# API
+fastapi
+uvicorn[standard]
+pydantic
 email-validator>=2.0.0
+
+# Monitoring
+prometheus-client
+prometheus-fastapi-instrumentator
+
+
+# Utilities
+loguru
+pyyaml
+python-dotenv
+httpx
+requests==2.31.0
+

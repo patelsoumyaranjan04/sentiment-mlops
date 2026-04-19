@@ -1,6 +1,6 @@
 # dvc.yaml
 # --------------------------------------------------------
-# DVC pipeline — mirrors the Airflow DAG for reproducibility.
+# DVC pipeline — full on-device ML pipeline.
 # Run with:  dvc repro
 # Visualize: dvc dag
 # --------------------------------------------------------
@@ -49,4 +49,24 @@ stages:
           cache: true
     metrics:
       - data/processed/baseline_stats.json:
+          cache: false
+
+  train:
+    cmd: python -m src.models.train
+    deps:
+      - src/models/train.py
+      - src/utils/config_loader.py
+      - configs/config.yaml
+      - data/processed/X_train.npy
+      - data/processed/X_val.npy
+      - data/processed/X_test.npy
+      - data/processed/y_train.npy
+      - data/processed/y_val.npy
+      - data/processed/y_test.npy
+      - data/processed/tokenizer.pkl
+    outs:
+      - data/processed/bilstm_model:
+          cache: true
+    metrics:
+      - data/processed/train_metrics.json:
           cache: false

@@ -1,22 +1,20 @@
 """
 src/models/train.py
 --------------------
-Trains the Bidirectional LSTM for Amazon Sentiment classification.
-Tracks every run with MLflow (metrics, params, artifacts).
+Trains the Bidirectional LSTM for Amazon Sentiment classification
+entirely on-device. Tracks every run with MLflow.
 
----- LOCAL run (after preprocessing): ----
+Run:
     python -m src.models.train
 
----- KAGGLE run: ----
-    Upload this file + configs/config.yaml + data/processed/*.npy
-    Set MLFLOW_TRACKING_URI env var or use file-based tracking.
-    Outputs: bilstm_model/ + tokenizer.pkl  (download as artifacts)
+Or via DVC (recommended):
+    dvc repro train
 """
 
 import os
 import sys
-import pickle
 import json
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -97,8 +95,15 @@ def train(cfg: dict | None = None) -> None:
     logger.info(f"vocab_size={vocab_size}, train={X_train.shape}, val={X_val.shape}")
 
     # ---- MLflow setup ----
-    mlflow.set_tracking_uri(mlf_cfg["tracking_uri"])
+    # Use SQLite by default — works fully on-device without a separate server.
+    # Override with MLFLOW_TRACKING_URI env var to point at the Docker MLflow server.
+    tracking_uri = os.environ.get(
+        "MLFLOW_TRACKING_URI",
+        f"sqlite:///{Path('mlruns/mlflow.db').resolve()}"
+    )
+    mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(mlf_cfg["experiment_name"])
+    logger.info(f"MLflow tracking URI: {tracking_uri}")
 
     with mlflow.start_run() as run:
         run_id = run.info.run_id
@@ -106,23 +111,24 @@ def train(cfg: dict | None = None) -> None:
 
         # ---- Log hyperparameters ----
         params = {
-            "vocab_size":            vocab_size,
-            "embedding_dim":         m_cfg["embedding_dim"],
-            "lstm_units":            m_cfg["lstm_units"],
-            "dense_units":           m_cfg["dense_units"],
-            "dropout":               m_cfg["dropout"],
-            "batch_size":            m_cfg["batch_size"],
-            "max_sequence_length":   proc_cfg["max_sequence_length"],
-            "optimizer":             m_cfg["optimizer"],
-            "epochs":                m_cfg["epochs"],
+            "vocab_size":              vocab_size,
+            "embedding_dim":           m_cfg["embedding_dim"],
+            "lstm_units":              m_cfg["lstm_units"],
+            "dense_units":             m_cfg["dense_units"],
+            "dropout":                 m_cfg["dropout"],
+            "recurrent_dropout":       m_cfg["recurrent_dropout"],
+            "batch_size":              m_cfg["batch_size"],
+            "max_sequence_length":     proc_cfg["max_sequence_length"],
+            "optimizer":               m_cfg["optimizer"],
+            "epochs":                  m_cfg["epochs"],
             "early_stopping_patience": m_cfg["early_stopping_patience"],
-            "test_size":             proc_cfg["test_size"],
-            "val_size":              proc_cfg["val_size"],
-            "random_state":          proc_cfg["random_state"],
+            "test_size":               proc_cfg["test_size"],
+            "val_size":                proc_cfg["val_size"],
+            "random_state":            proc_cfg["random_state"],
         }
         mlflow.log_params(params)
 
-        # ---- Log baseline stats as artifact ----
+        # Log baseline stats
         baseline_path = proc_dir / "baseline_stats.json"
         if baseline_path.exists():
             mlflow.log_artifact(str(baseline_path), artifact_path="data_stats")
@@ -131,14 +137,12 @@ def train(cfg: dict | None = None) -> None:
         model = build_model(vocab_size, cfg)
         model.summary()
 
-        # Log model architecture as text
         stringlist = []
         model.summary(print_fn=lambda x: stringlist.append(x))
-        arch_text = "\n".join(stringlist)
-        mlflow.log_text(arch_text, "model_summary.txt")
+        mlflow.log_text("\n".join(stringlist), "model_summary.txt")
 
         # ---- Callbacks ----
-        checkpoint_dir = Path("data/processed/checkpoints")
+        checkpoint_dir = proc_dir / "checkpoints"
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         callbacks = [
@@ -205,6 +209,12 @@ def train(cfg: dict | None = None) -> None:
         for k, v in metrics.items():
             logger.info(f"  {k}: {v:.4f}")
 
+        # ---- Save metrics JSON for DVC tracking ----
+        metrics_path = proc_dir / "train_metrics.json"
+        with open(metrics_path, "w") as f:
+            json.dump(metrics, f, indent=2)
+        logger.info(f"Metrics saved to {metrics_path}")
+
         # ---- Log classification report ----
         report = classification_report(y_test, y_pred, target_names=["Negative", "Positive"])
         mlflow.log_text(report, "classification_report.txt")
@@ -214,12 +224,12 @@ def train(cfg: dict | None = None) -> None:
         cm = confusion_matrix(y_test, y_pred).tolist()
         mlflow.log_text(json.dumps({"confusion_matrix": cm}), "confusion_matrix.json")
 
-        # ---- Save & register model ----
+        # ---- Save model ----
         model_save_path = Path(m_cfg["model_save_path"])
         model.save(str(model_save_path))
         logger.info(f"Model saved to {model_save_path}")
 
-        # Infer signature from sample
+        # Log model artifact to MLflow
         sample_input  = X_test[:5]
         sample_output = model.predict(sample_input)
         signature = infer_signature(sample_input, sample_output)
@@ -228,11 +238,12 @@ def train(cfg: dict | None = None) -> None:
             model,
             artifact_path="model",
             signature=signature,
-            registered_model_name=mlf_cfg["registered_model_name"],
         )
 
-        # Log tokenizer as artifact
-        mlflow.log_artifact(proc_cfg["tokenizer_save_path"], artifact_path="tokenizer")
+        # Log tokenizer
+        tok_json = proc_dir / "tokenizer.json"
+        if tok_json.exists():
+            mlflow.log_artifact(str(tok_json), artifact_path="tokenizer")
 
         logger.info(f"✅ Training complete. Run ID: {run_id}")
         logger.info(f"   Test Accuracy : {metrics['test_accuracy']:.4f}")

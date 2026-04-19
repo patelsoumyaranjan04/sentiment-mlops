@@ -4,7 +4,7 @@
 # grafana. Run with:  docker compose up --build
 # --------------------------------------------------------
 
-version: "3.8"
+
 
 services:
 
@@ -32,11 +32,10 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # ---- 2. React Frontend ----
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../docker/Dockerfile.frontend
+      context: .
+      dockerfile: docker/Dockerfile.frontend
     container_name: sentiment-frontend
     ports:
       - "3002:80"
@@ -46,20 +45,14 @@ services:
 
   # ---- 3. MLflow Tracking Server ----
   mlflow:
-    image: python:3.10-slim
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mlflow
     container_name: sentiment-mlflow
-    command: >
-      bash -c "pip install mlflow==2.8.1 -q &&
-               mlflow server
-               --host 0.0.0.0
-               --port 5000
-               --backend-store-uri /mlflow/mlruns
-               --default-artifact-root /mlflow/artifacts"
     ports:
       - "5000:5000"
     volumes:
       - ./mlruns:/mlflow/mlruns
-      - mlflow_artifacts:/mlflow/artifacts
     restart: unless-stopped
 
   # ---- 4. Prometheus ----

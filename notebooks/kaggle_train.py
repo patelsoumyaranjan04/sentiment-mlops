@@ -40,7 +40,7 @@ from sklearn.metrics import (
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, Dense, Dropout
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import mlflow
@@ -57,14 +57,14 @@ CFG = {
     "test_size":              0.20,
     "val_size":               0.10,
     "random_state":           42,
-    "max_sequence_length":    64,
-    "embedding_dim":          64,
-    "lstm_units":             100,
-    "dense_units":            128,
-    "dropout":                0.3,
-    "batch_size":             64,
-    "epochs":                 10,
-    "early_stopping_patience":5,
+    "max_sequence_length":    128,   # was 64 — longer reviews contain more signal
+    "embedding_dim":          128,   # was 64 — richer word representations
+    "lstm_units":             128,   # was 100
+    "dense_units":            64,    # was 128 — smaller head reduces overfitting
+    "dropout":                0.3,   # was 0.3 — keep
+    "batch_size":             128,   # was 64 — faster convergence
+    "epochs":                 15,    # was 10 — give early stopping more room
+    "early_stopping_patience":3,     # was 5 — stop faster if plateauing
     "optimizer":              "adam",
     "loss":                   "binary_crossentropy",
     "experiment_name":        "amazon-sentiment-bilstm",
@@ -153,8 +153,10 @@ print("Baseline stats:", baseline)
 # ============================================================
 # CELL 4 — Model + MLflow Training
 # ============================================================
-mlflow.set_tracking_uri(f"file://{CFG['output_dir']}/mlruns")
+# Use SQLite backend — supports model registry on Kaggle
+mlflow.set_tracking_uri(f"sqlite:///{CFG['output_dir']}/mlruns/mlflow.db")
 mlflow.set_experiment(CFG["experiment_name"])
+mlflow.set_registry_uri(f"sqlite:///{CFG['output_dir']}/mlruns/mlflow.db")
 
 with mlflow.start_run() as run:
     print(f"MLflow run_id: {run.info.run_id}")
@@ -162,8 +164,13 @@ with mlflow.start_run() as run:
 
     # Build model
     model = Sequential([
-        Embedding(vocab_size, CFG["embedding_dim"]),
-        Bidirectional(LSTM(CFG["lstm_units"], dropout=0, recurrent_dropout=0)),
+        Embedding(vocab_size, CFG["embedding_dim"], mask_zero=True),
+        Bidirectional(LSTM(
+            CFG["lstm_units"],
+            dropout=0.3,              # input dropout on LSTM
+            recurrent_dropout=0.2,    # recurrent dropout reduces overfitting
+            return_sequences=False,
+        )),
         Dense(CFG["dense_units"], activation="relu"),
         Dropout(CFG["dropout"]),
         Dense(1, activation="sigmoid"),
@@ -177,6 +184,8 @@ with mlflow.start_run() as run:
                       restore_best_weights=True, verbose=1),
         ModelCheckpoint(os.path.join(CFG["output_dir"], "best_model.h5"),
                         monitor="val_loss", save_best_only=True, verbose=1),
+        ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2,
+                          min_lr=1e-6, verbose=1),
     ]
 
     # Train
@@ -227,7 +236,8 @@ with mlflow.start_run() as run:
     mlflow.keras.log_model(
         model, artifact_path="model",
         signature=sig,
-        registered_model_name=CFG["registered_model_name"],
+        # registered_model_name requires a tracking server — not supported
+        # with file:// URI on old Kaggle MLflow. Register locally instead.
     )
     mlflow.log_artifact(tok_path, artifact_path="tokenizer")
     mlflow.log_artifact(
