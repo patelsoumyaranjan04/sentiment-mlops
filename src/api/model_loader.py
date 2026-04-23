@@ -61,14 +61,28 @@ def _load_tokenizer(cfg: dict):
     tok_path = Path(cfg["preprocessing"]["tokenizer_save_path"])
     json_path = tok_path.parent / "tokenizer.json"
 
-    # Prefer JSON format — fully portable, no keras_preprocessing dependency
+    # Prefer JSON format — no tensorflow/keras dependency
     if json_path.exists():
-        from tensorflow.keras.preprocessing.text import tokenizer_from_json
-        tokenizer = tokenizer_from_json(json_path.read_text())
-        logger.info(f"Tokenizer loaded from JSON at {json_path} (vocab_size={len(tokenizer.word_index)+1})")
-        return tokenizer
+        import json
+        data = json.loads(json_path.read_text())
 
-    # Fallback: pickle — patch module path for Kaggle-exported tokenizers
+        # Handle both SimpleTokenizer JSON and Keras tokenizer JSON formats
+        if "word_index" in data:
+            # SimpleTokenizer format (our pure Python tokenizer)
+            from src.data.preprocess import SimpleTokenizer
+            tokenizer = SimpleTokenizer.from_json(json_path.read_text())
+            logger.info(f"Tokenizer loaded from JSON at {json_path} "
+                       f"(vocab_size={len(tokenizer.word_index)+1})")
+            return tokenizer
+        else:
+            # Keras tokenizer_from_json format (legacy Kaggle export)
+            from tensorflow.keras.preprocessing.text import tokenizer_from_json
+            tokenizer = tokenizer_from_json(json_path.read_text())
+            logger.info(f"Tokenizer loaded from Keras JSON at {json_path} "
+                       f"(vocab_size={len(tokenizer.word_index)+1})")
+            return tokenizer
+
+    # Fallback: pickle
     if not tok_path.exists():
         raise FileNotFoundError(
             f"Tokenizer not found at {tok_path} or {json_path}. "
@@ -76,12 +90,11 @@ def _load_tokenizer(cfg: dict):
         )
     with open(tok_path, "rb") as f:
         raw = f.read()
-
-    # Patch keras_preprocessing → tensorflow.keras.preprocessing if needed
     patched = raw.replace(
         b"keras_preprocessing.text",
         b"tensorflow.keras.preprocessing.text"
     )
     tokenizer = pickle.loads(patched)
-    logger.info(f"Tokenizer loaded from pickle at {tok_path} (vocab_size={len(tokenizer.word_index)+1})")
+    logger.info(f"Tokenizer loaded from pickle at {tok_path} "
+               f"(vocab_size={len(tokenizer.word_index)+1})")
     return tokenizer

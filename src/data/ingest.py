@@ -53,7 +53,8 @@ def ingest(cfg: dict | None = None) -> pd.DataFrame:
     if cfg is None:
         cfg = load_config()
 
-    raw_path = Path(cfg["data"]["raw_file"])
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    raw_path = PROJECT_ROOT / cfg["data"]["raw_file"]
     if not raw_path.exists():
         raise FileNotFoundError(
             f"Raw data file not found: {raw_path}\n"

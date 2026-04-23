@@ -12,15 +12,14 @@ import sys
 import re
 import pickle
 from pathlib import Path
-
+import json
 import numpy as np
 import pandas as pd
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -35,6 +34,63 @@ for pkg in ["stopwords", "wordnet", "punkt", "omw-1.4"]:
 
 lemmatizer = WordNetLemmatizer()
 STOP_WORDS = set(stopwords.words("english"))
+
+class SimpleTokenizer:
+    """
+    Pure Python tokenizer — identical behavior to Keras Tokenizer.
+    No tensorflow dependency. Airflow-safe.
+    """
+    def __init__(self):
+        self.word_index = {}
+        self.index_word = {}
+        self._word_counts = {}
+
+    def fit_on_texts(self, texts):
+        for text in texts:
+            for word in text.split():
+                self._word_counts[word] = self._word_counts.get(word, 0) + 1
+        # Sort by frequency descending (matches Keras behavior)
+        sorted_words = sorted(self._word_counts.items(),
+                            key=lambda x: x[1], reverse=True)
+        self.word_index = {word: idx + 1
+                          for idx, (word, _) in enumerate(sorted_words)}
+        self.index_word = {idx: word
+                          for word, idx in self.word_index.items()}
+
+    def texts_to_sequences(self, texts):
+        return [
+            [self.word_index[w] for w in text.split() if w in self.word_index]
+            for text in texts
+        ]
+
+    def to_json(self):
+        return json.dumps({
+            "word_index": self.word_index,
+            "index_word": {str(k): v for k, v in self.index_word.items()},
+        })
+
+    @classmethod
+    def from_json(cls, json_str):
+        data = json.loads(json_str)
+        tok = cls()
+        tok.word_index = data["word_index"]
+        tok.index_word = {int(k): v for k, v in data["index_word"].items()}
+        return tok
+
+
+def pad_sequences(sequences, maxlen, padding="post", truncating="post"):
+    """Pure numpy pad_sequences — identical to Keras version."""
+    result = np.zeros((len(sequences), maxlen), dtype=np.int32)
+    for i, seq in enumerate(sequences):
+        if truncating == "post":
+            seq = seq[:maxlen]
+        else:
+            seq = seq[-maxlen:]
+        if padding == "post":
+            result[i, :len(seq)] = seq
+        else:
+            result[i, maxlen - len(seq):] = seq
+    return result
 
 
 # ------------------------------------------------------------------ #
@@ -99,7 +155,8 @@ def preprocess(cfg: dict | None = None) -> None:
     data_cfg = cfg["data"]
 
     # ---- Load validated raw data ----
-    raw_path = Path(data_cfg["raw_dir"]) / "Amazon_review_validated.csv"
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    raw_path = PROJECT_ROOT / data_cfg["raw_dir"] / "Amazon_review_validated.csv"
     if not raw_path.exists():
         raise FileNotFoundError(f"Run ingest.py first. File not found: {raw_path}")
 
@@ -136,7 +193,7 @@ def preprocess(cfg: dict | None = None) -> None:
     logger.info(f"Split sizes — train: {len(X_train)}, val: {len(X_val)}, test: {len(X_test)}")
 
     # ---- Tokenizer ----
-    tokenizer = Tokenizer()
+    tokenizer = SimpleTokenizer()
     tokenizer.fit_on_texts(X_train)
     vocab_size = len(tokenizer.word_index) + 1
     logger.info(f"Vocabulary size: {vocab_size}")
@@ -145,14 +202,14 @@ def preprocess(cfg: dict | None = None) -> None:
 
     def encode(texts):
         seqs = tokenizer.texts_to_sequences(texts)
-        return pad_sequences(seqs, maxlen=max_len, padding="post", truncating="post")
-
+        return pad_sequences(seqs, maxlen=max_len)
     X_train_pad = encode(X_train)
     X_val_pad   = encode(X_val)
     X_test_pad  = encode(X_test)
 
     # ---- Save outputs ----
-    proc_dir = Path(data_cfg["processed_dir"])
+    proc_dir = PROJECT_ROOT / data_cfg["processed_dir"]
+
     proc_dir.mkdir(parents=True, exist_ok=True)
 
     # Save splits as CSV (text + label, for reference)
@@ -173,19 +230,23 @@ def preprocess(cfg: dict | None = None) -> None:
     np.save(proc_dir / "y_val.npy",   y_val)
     np.save(proc_dir / "y_test.npy",  y_test)
 
-    # Save tokenizer
-    tok_path = Path(proc_cfg["tokenizer_save_path"])
+    # Save tokenizer as JSON (portable, no tensorflow dependency)
+    json_path = proc_dir / "tokenizer.json"
+    json_path.write_text(tokenizer.to_json())
+    logger.info(f"Tokenizer saved as JSON to {json_path}")
+
+    # Also save pickle for backward compatibility
+    tok_path = PROJECT_ROOT / proc_cfg["tokenizer_save_path"]
     tok_path.parent.mkdir(parents=True, exist_ok=True)
     with open(tok_path, "wb") as f:
         pickle.dump(tokenizer, f)
-    logger.info(f"Tokenizer saved to {tok_path}")
+    logger.info(f"Tokenizer saved as pickle to {tok_path}")
 
     # Save baseline stats
     import json
     with open(proc_dir / "baseline_stats.json", "w") as f:
         json.dump({**baseline, "vocab_size_tokenizer": vocab_size}, f, indent=2)
     logger.info(f"Baseline stats saved to {proc_dir / 'baseline_stats.json'}")
-
     logger.info("✅ Preprocessing complete.")
 
 

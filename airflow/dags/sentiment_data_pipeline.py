@@ -97,22 +97,5 @@ with DAG(
         """,
     )
 
-    # ---- Task 3: DVC add processed artifacts ----
-    dvc_add_task = BashOperator(
-        task_id="dvc_add",
-        bash_command=(
-            f"cd {PROJECT_ROOT} && "
-            "dvc add data/processed/ data/raw/Amazon_review_validated.csv"
-        ),
-        doc_md="Tracks processed data artifacts with DVC.",
-    )
-
-    # ---- Task 4: DVC push to remote ----
-    dvc_push_task = BashOperator(
-        task_id="dvc_push",
-        bash_command=f"cd {PROJECT_ROOT} && dvc push",
-        doc_md="Pushes DVC-tracked artifacts to the configured remote.",
-    )
-
     # ---- Dependencies ----
-    ingest_task >> preprocess_task >> dvc_add_task >> dvc_push_task
+    ingest_task >> preprocess_task 
