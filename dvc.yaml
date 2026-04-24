@@ -33,6 +33,18 @@ stages:
           cache: true
       - data/processed/test.csv:
           cache: true
+    metrics:
+      - data/processed/baseline_stats.json:
+          cache: false
+  featurize:
+    cmd: python -m src.features.featurize
+    deps:
+      - src/features/featurize.py
+      - configs/config.yaml
+      - data/processed/train.csv
+      - data/processed/val.csv
+      - data/processed/test.csv
+    outs:
       - data/processed/X_train.npy:
           cache: true
       - data/processed/X_val.npy:
@@ -47,9 +59,6 @@ stages:
           cache: true
       - data/processed/tokenizer.pkl:
           cache: true
-    metrics:
-      - data/processed/baseline_stats.json:
-          cache: false
 
   train:
     cmd: python -m src.models.train

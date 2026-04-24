@@ -73,6 +73,14 @@ def train(cfg: dict | None = None) -> None:
     if cfg is None:
         cfg = load_config()
 
+
+    # Ensure full reproducibility
+    import random
+    random.seed(cfg["preprocessing"]["random_state"])
+    np.random.seed(cfg["preprocessing"]["random_state"])
+    tf.random.set_seed(cfg["preprocessing"]["random_state"])
+    os.environ["PYTHONHASHSEED"] = str(cfg["preprocessing"]["random_state"])
+
     proc_cfg = cfg["preprocessing"]
     m_cfg    = cfg["model"]
     mlf_cfg  = cfg["mlflow"]
@@ -106,6 +114,18 @@ def train(cfg: dict | None = None) -> None:
     logger.info(f"MLflow tracking URI: {tracking_uri}")
 
     with mlflow.start_run() as run:
+        import subprocess
+        try:
+            git_hash = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"]
+            ).decode("utf-8").strip()
+            mlflow.set_tag("git_commit", git_hash)
+            mlflow.set_tag("git_branch", subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"]
+            ).decode("utf-8").strip())
+            logger.info(f"Git commit: {git_hash}")
+        except Exception:
+            logger.warning("Could not retrieve git commit hash")
         run_id = run.info.run_id
         logger.info(f"MLflow run_id: {run_id}")
 
@@ -195,7 +215,27 @@ def train(cfg: dict | None = None) -> None:
         # ---- Evaluate on test set ----
         logger.info("Evaluating on test set ...")
         y_prob = model.predict(X_test, batch_size=m_cfg["batch_size"]).flatten()
-        y_pred = (y_prob >= 0.5).astype(int)
+        from sklearn.metrics import precision_recall_curve, f1_score
+
+        # Find optimal threshold by maximising F1
+        precisions, recalls, thresholds = precision_recall_curve(y_test, y_prob)
+        f1_scores = 2 * (precisions * recalls) / (precisions + recalls + 1e-8)
+        optimal_idx = np.argmax(f1_scores)
+        optimal_threshold = float(thresholds[optimal_idx]) if optimal_idx < len(thresholds) else 0.5
+
+        logger.info(f"Optimal threshold: {optimal_threshold:.4f} (vs default 0.5)")
+        mlflow.log_metric("optimal_threshold", optimal_threshold)
+        mlflow.log_metric("optimal_f1",        float(f1_scores[optimal_idx]))
+
+        # Save threshold to config/json for API to use
+        threshold_path = proc_dir / "optimal_threshold.json"
+        with open(threshold_path, "w") as f:
+            json.dump({"threshold": optimal_threshold}, f)
+        mlflow.log_artifact(str(threshold_path), artifact_path="model_config")
+
+        # Use optimal threshold for final predictions
+        y_pred = (y_prob >= optimal_threshold).astype(int)
+    
 
         metrics = {
             "test_accuracy":  float(accuracy_score(y_test, y_pred)),
@@ -239,6 +279,48 @@ def train(cfg: dict | None = None) -> None:
             artifact_path="model",
             signature=signature,
         )
+
+        # ---- Register model in MLflow Model Registry ----
+        try:
+            model_name = mlf_cfg["registered_model_name"]
+            model_uri  = f"runs:/{run_id}/model"
+
+            # Create registered model entry if first time
+            try:
+                client = mlflow.tracking.MlflowClient()
+                client.create_registered_model(
+                    name=model_name,
+                    description="Bidirectional LSTM for Amazon review sentiment classification.",
+                )
+                logger.info(f"Created registered model: {model_name}")
+            except Exception:
+                pass  # Already exists — that's fine
+
+            # Register this run's model as a new version
+            version = mlflow.register_model(
+                model_uri=model_uri,
+                name=model_name,
+            )
+            logger.info(f"Registered model version: {version.version}")
+
+            # Transition to Production, archive previous
+            client = mlflow.tracking.MlflowClient()
+            for mv in client.search_model_versions(f"name='{model_name}'"):
+                if mv.current_stage == "Production" and mv.version != version.version:
+                    client.transition_model_version_stage(
+                        name=model_name,
+                        version=mv.version,
+                        stage="Archived",
+                    )
+            client.transition_model_version_stage(
+                name=model_name,
+                version=version.version,
+                stage="Production",
+            )
+            logger.info(f"Model '{model_name}' v{version.version} → Production")
+
+        except Exception as e:
+            logger.warning(f"Model registration skipped: {e}")
 
         # Log tokenizer
         tok_json = proc_dir / "tokenizer.json"

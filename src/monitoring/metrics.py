@@ -39,3 +39,29 @@ MODEL_LOADED_GAUGE = Gauge(
     name="sentiment_model_loaded",
     documentation="1 if model is loaded and ready, 0 otherwise.",
 )
+
+# ---- Drift detection metrics ----
+DRIFT_DETECTED_GAUGE = Gauge(
+    name="sentiment_drift_detected",
+    documentation="1 if data drift detected in current window, 0 otherwise.",
+)
+
+DRIFT_KS_STATISTIC = Gauge(
+    name="sentiment_drift_ks_statistic",
+    documentation="KS test statistic for current window vs baseline.",
+)
+
+DRIFT_P_VALUE = Gauge(
+    name="sentiment_drift_p_value",
+    documentation="KS test p-value for current window vs baseline.",
+)
+
+DRIFT_MEAN_SHIFT = Gauge(
+    name="sentiment_drift_mean_shift",
+    documentation="Difference between current window mean length and baseline mean.",
+)
+
+DRIFT_WINDOW_MEAN = Gauge(
+    name="sentiment_drift_window_mean",
+    documentation="Mean word length of the current rolling window.",
+)
