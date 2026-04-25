@@ -25,7 +25,7 @@ from typing import Annotated
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, conlist
 from prometheus_fastapi_instrumentator import Instrumentator
 
 import sys
@@ -145,8 +145,7 @@ class PredictResponse(BaseModel):
 
 
 class BatchPredictRequest(BaseModel):
-    reviews: Annotated[list[str], Field(min_length=1, max_length=50)]
-
+    reviews: conlist(str, min_length=1, max_length=50)
 
 class BatchPredictResponse(BaseModel):
     predictions: list[PredictResponse]
@@ -182,6 +181,8 @@ def _preprocess_single(text: str, tokenizer, max_len: int) -> np.ndarray:
 
 
 def _run_inference(texts: list[str]) -> list[dict]:
+    if not texts:
+        raise ValueError("No texts provided for inference")
     model     = _state["model"]
     tokenizer = _state["tokenizer"]
     threshold = _state["threshold"]
