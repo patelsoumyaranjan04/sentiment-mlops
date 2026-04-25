@@ -145,7 +145,7 @@ class PredictResponse(BaseModel):
 
 
 class BatchPredictRequest(BaseModel):
-    reviews: conlist(str, min_length=1, max_length=50)
+    reviews: conlist(str, min_items=1, max_items=50)
 
 class BatchPredictResponse(BaseModel):
     predictions: list[PredictResponse]
