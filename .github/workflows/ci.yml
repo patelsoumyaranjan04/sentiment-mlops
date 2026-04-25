@@ -22,8 +22,9 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.backend.txt') }}
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.backend.txt pytest pytest-cov
+          python -m pip install --upgrade pip
+          pip install -r requirements.backend.txt
+          pip install pytest==7.4.3 pytest-cov==4.1.0 httpx==0.24.1
       - name: Download NLTK data
         run: |
           python -c "

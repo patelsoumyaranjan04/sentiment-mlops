@@ -25,7 +25,7 @@ from typing import Annotated
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, conlist
+from pydantic import BaseModel, Field, validator
 from prometheus_fastapi_instrumentator import Instrumentator
 
 import sys
@@ -126,13 +126,21 @@ Instrumentator().instrument(app).expose(app)
 # ------------------------------------------------------------------ #
 #  Schemas                                                             #
 # ------------------------------------------------------------------ #
-
 class PredictRequest(BaseModel):
-    review: Annotated[str, Field(
-        min_length=1,
-        max_length=5000,
-        example="This product is absolutely amazing!"
-    )]
+    review: str
+
+    @validator("review")
+    def review_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("review must not be empty")
+        if len(v) > 5000:
+            raise ValueError("review must be at most 5000 characters")
+        return v
+
+    class Config:
+        schema_extra = {
+            "example": {"review": "This product is absolutely amazing!"}
+        }
 
 
 class PredictResponse(BaseModel):
@@ -145,7 +153,15 @@ class PredictResponse(BaseModel):
 
 
 class BatchPredictRequest(BaseModel):
-    reviews: conlist(str, min_items=1, max_items=50)
+    reviews: list[str]
+
+    @validator("reviews")
+    def reviews_not_empty(cls, v):
+        if not v:
+            raise ValueError("reviews list must not be empty")
+        if len(v) > 50:
+            raise ValueError("reviews list must have at most 50 items")
+        return v
 
 class BatchPredictResponse(BaseModel):
     predictions: list[PredictResponse]

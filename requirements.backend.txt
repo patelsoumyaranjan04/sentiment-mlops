@@ -17,7 +17,7 @@ mlflow
 # API
 fastapi
 uvicorn[standard]
-pydantic
+pydantic==2.4.2
 email-validator>=2.0.0
 
 # Monitoring
@@ -29,8 +29,7 @@ prometheus-fastapi-instrumentator
 loguru
 pyyaml
 python-dotenv
-httpx==0.24.1
-starlette==0.27.0
+
 
 requests==2.31.0
 
