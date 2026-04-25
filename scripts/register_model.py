@@ -44,7 +44,7 @@ def register_model():
     # Get the latest run from the experiment
     runs = client.search_runs(
         experiment_ids=["1"],
-        order_by=["start_time DESC"],
+        order_by=["metrics.test_roc_auc DESC"],  # ← best model first
         max_results=1,
     )
     if not runs:
