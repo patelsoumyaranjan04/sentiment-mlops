@@ -40,7 +40,6 @@ def mock_tokenizer():
 
 @pytest.fixture(scope="module")
 def client(mock_model, mock_tokenizer):
-    """Create a FastAPI TestClient with mocked model loading."""
     with patch("src.api.model_loader.load_model_and_tokenizer",
                return_value=(mock_model, mock_tokenizer)):
         from fastapi.testclient import TestClient
@@ -48,8 +47,11 @@ def client(mock_model, mock_tokenizer):
         _state["model"]     = mock_model
         _state["tokenizer"] = mock_tokenizer
         _state["ready"]     = True
-        return TestClient(app)
-
+        _state["threshold"] = 0.5
+        _state["drift"]     = None
+        # Use lifespan=False to avoid startup errors in CI
+        with TestClient(app, raise_server_exceptions=True) as c:
+            yield c
 
 # ------------------------------------------------------------------ #
 #  Health & Readiness                                                  #

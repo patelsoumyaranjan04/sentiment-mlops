@@ -29,7 +29,9 @@ prometheus-fastapi-instrumentator
 loguru
 pyyaml
 python-dotenv
-httpx
+httpx==0.24.1
+starlette==0.27.0
+
 requests==2.31.0
 
 scipy==1.11.3

@@ -20,12 +20,11 @@ ENV/
 
 # Data (tracked by DVC)
 data/raw/
-data/processed/
-*.csv
-*.tsv
-*.bz2
-*.zip
-*.gz
+data/processed/*.npy
+data/processed/*.pkl
+data/processed/*.h5
+data/processed/bilstm_model/
+data/processed/checkpoints/
 
 # Model artifacts (tracked by DVC/MLflow)
 *.pkl

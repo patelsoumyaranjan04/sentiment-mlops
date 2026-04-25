@@ -1,0 +1,7 @@
+{
+  "vocab_size": 86458,
+  "max_sequence_length": 128,
+  "train_samples": 70556,
+  "val_samples": 10080,
+  "test_samples": 20160
+}

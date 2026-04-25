@@ -1,0 +1,9 @@
+{
+  "mean_length": 37.088217786420095,
+  "std_length": 21.595314517412064,
+  "min_length": 1,
+  "max_length": 161,
+  "vocab_size": 105474,
+  "total_samples": 100796,
+  "vocab_size_tokenizer": 86458
+}
