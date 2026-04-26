@@ -315,10 +315,10 @@ def train(cfg: dict | None = None) -> None:
             client.transition_model_version_stage(
                 name=model_name,
                 version=version.version,
-                stage="Production",
+                stage="Staging",
             )
-            logger.info(f"Model '{model_name}' v{version.version} → Production")
-
+            logger.info(f"Model '{model_name}' v{version.version} → Staging")
+            logger.info("Run scripts/register_model.py to promote best model to Production")
         except Exception as e:
             logger.warning(f"Model registration skipped: {e}")
 
