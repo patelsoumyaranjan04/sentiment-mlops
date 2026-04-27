@@ -1,93 +1,136 @@
-# 🛒 Amazon Reviews Sentiment Analysis — MLOps Pipeline
 
-Binary sentiment classification (positive / negative) of Amazon product reviews  
-using a **Bidirectional LSTM** model, wrapped in a full **MLOps lifecycle**.
+Soumya Ranjan Patel || DA25M029
+
+
+# SentiAI — Amazon Review Sentiment Analysis
+
+> Binary sentiment classification of Amazon product reviews using a Bidirectional LSTM,
+> served through a production-grade MLOps pipeline running entirely on-device.
 
 ---
 
-## 📐 Architecture Overview
+## 📊 Model Performance
 
-```
-┌─────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│  React UI   │───▶│  FastAPI Backend │───▶│  MLflow Model    │
-│  (Frontend) │    │  (Inference API) │    │  Registry        │
-└─────────────┘    └──────────────────┘    └──────────────────┘
-                           │                        │
-                    ┌──────▼──────┐         ┌──────▼──────┐
-                    │  Prometheus │         │  Airflow    │
-                    │  + Grafana  │         │  DAG        │
-                    └─────────────┘         └─────────────┘
-```
+| Metric | Value |
+|---|---|
+| Test Accuracy | 85.76% |
+| ROC-AUC | 0.936 |
+| F1 Score | 0.861 |
+| Optimal Threshold | 0.4879 |
+| p95 Inference Latency | < 200ms |
+
+---
 
 ## 🧱 Tech Stack
 
 | Layer | Tool |
 |---|---|
-| Model | TensorFlow/Keras BiLSTM |
-| Experiment Tracking | MLflow |
-| Data Version Control | DVC |
-| Data Pipeline | Apache Airflow |
-| API Serving | FastAPI |
-| Frontend | React |
+| Model | TensorFlow / Keras BiLSTM |
+| Data Pipeline | Apache Airflow + DVC |
+| Experiment Tracking | MLflow (SQLite) |
+| API Serving | FastAPI + Uvicorn |
+| Frontend | React + Vite + nginx |
 | Monitoring | Prometheus + Grafana |
+| CI/CD | GitHub Actions |
 | Containerization | Docker + Docker Compose |
-| Source Control | Git + Git LFS |
+
+---
 
 ## 🚀 Quick Start
 
-```bash
-# 1. Clone the repo
-git clone <repo-url>
-cd sentiment-mlops
+### Prerequisites
+- Docker + Docker Compose
+- conda (for local development)
+- Git + DVC
 
-# 2. Create environment
+### 1. Clone and setup environment
+```bash
+git clone https://github.com/[YOUR_GITHUB_USERNAME]/sentiment-mlops.git
+cd sentiment-mlops
 conda env create -f environment.yml
 conda activate sentiment-mlops
+```
 
-# 3. Pull data with DVC
+### 2. Pull data artifacts
+```bash
 dvc pull
+```
 
-# 4. Start all services
+### 3. Start all services
+```bash
 docker compose up --build
 ```
+
+### 4. Access the application
+
+| Service | URL | Credentials |
+|---|---|---|
+| Frontend | http://localhost:3002 | — |
+| API + Swagger | http://localhost:8000/docs | — |
+| MLflow | http://localhost:5000 | — |
+| Prometheus | http://localhost:9090 | — |
+| Grafana | http://localhost:3003 | admin / admin |
+| Airflow | http://localhost:8080 | admin / [see logs] |
+
+---
+
+## 🔄 DVC Pipeline
+
+```bash
+dvc repro      # run full pipeline
+dvc dag        # visualize pipeline
+dvc metrics show  # view model metrics
+```
+
+Pipeline stages:
+```
+ingest → preprocess → featurize → train
+```
+
+---
+
+## 🧪 Running Tests
+
+```bash
+pytest tests/ -v --tb=short
+# Expected: 36 passed
+```
+
+---
 
 ## 📁 Project Structure
 
 ```
 sentiment-mlops/
-├── airflow/           # Airflow DAGs for data pipeline
-├── configs/           # Central YAML configuration
-├── data/
-│   ├── raw/           # Raw CSV (DVC tracked)
-│   └── processed/     # Tokenizer, train/test splits
-├── docker/            # Dockerfiles
-├── docs/              # HLD, LLD, test plan, user manual
-├── frontend/          # React web application
-├── mlflow_project/    # MLproject file + conda env
-├── notebooks/         # Reference/EDA notebooks
-├── scripts/           # Utility scripts
+├── airflow/dags/          # Airflow DAG for data pipeline
+├── configs/config.yaml    # Central configuration
+├── data/processed/        # Model artifacts (DVC tracked)
+├── docker/                # Dockerfiles + monitoring configs
+├── docs/                  # HLD, LLD, Test Plan, User Manual
+├── frontend/              # React web application
+├── mlruns/                # MLflow tracking (SQLite)
+├── notebooks/             # Reference training script
+├── scripts/               # Utility scripts
 ├── src/
-│   ├── data/          # Data ingestion & preprocessing
-│   ├── features/      # Feature engineering
-│   ├── models/        # Model training & evaluation
-│   ├── api/           # FastAPI inference server
-│   ├── monitoring/    # Prometheus exporters
-│   └── utils/         # Config loader, logger
-└── tests/             # Unit & integration tests
+│   ├── api/               # FastAPI inference server
+│   ├── data/              # Ingestion + preprocessing
+│   ├── features/          # Feature engineering
+│   ├── models/            # Training + evaluation
+│   ├── monitoring/        # Prometheus metrics + drift detection
+│   └── utils/             # Config loader + logger
+└── tests/                 # Unit + integration test suites
 ```
 
-## 📊 Model Performance
-
-| Model | Accuracy | ROC-AUC |
-|---|---|---|
-| Bidirectional LSTM | ~94% | ~0.94 |
-| XGBoost (baseline) | ~91% | ~0.91 |
+---
 
 ## 📖 Documentation
 
-See the `docs/` folder for:
-- Architecture Diagram
-- High-Level Design (HLD)
-- Low-Level Design (LLD) with API specs
-- Test Plan & Test Cases
-- User Manual
+| Document | Location |
+|---|---|
+| Architecture + HLD | `Architecture & HLD.pdf` |
+| API Spec + LLD | `LLD.pdf` |
+| Test Plan | `Test Plan & Test Cases.pdf` |
+| User Manual | `USER_MANUAL.pdf` |
+
+---
+
