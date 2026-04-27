@@ -8,7 +8,12 @@ Soumya Ranjan Patel || DA25M029
 > served through a production-grade MLOps pipeline running entirely on-device.
 
 ---
-
+## Deliverables
+1. Architecutre and HLD : `Architecture & HLD.pdf`
+2. Low Level Design : `LLD.pdf`
+3. Test Pland and Cases : `Test Plan & Test Cases.pdf`
+4. User Manual : `User_Manual.pdf`
+5. Project Report : `Report.pdf`
 ## 📊 Model Performance
 
 | Metric | Value |
@@ -109,6 +114,12 @@ sentiment-mlops/
 ├── frontend/              # React web application
 ├── mlruns/                # MLflow tracking (SQLite)
 ├── scripts/               # Utility scripts
+├── Architecture & HLD.pdf
+├── LLD.pdf
+├── Test Plan & Test Cases.pdf
+├── User_Manual.pdf
+├── Report.pdf
+├── AI Disclosure.pdf
 ├── src/
 │   ├── api/               # FastAPI inference server
 │   ├── data/              # Ingestion + preprocessing
