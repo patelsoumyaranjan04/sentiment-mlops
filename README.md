@@ -106,10 +106,8 @@ sentiment-mlops/
 ├── configs/config.yaml    # Central configuration
 ├── data/processed/        # Model artifacts (DVC tracked)
 ├── docker/                # Dockerfiles + monitoring configs
-├── docs/                  # HLD, LLD, Test Plan, User Manual
 ├── frontend/              # React web application
 ├── mlruns/                # MLflow tracking (SQLite)
-├── notebooks/             # Reference training script
 ├── scripts/               # Utility scripts
 ├── src/
 │   ├── api/               # FastAPI inference server
