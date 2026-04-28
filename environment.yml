@@ -20,7 +20,7 @@ dependencies:
       - mlflow==2.8.1
       - dvc==3.28.0
 
-      # NOTE: Apache Airflow installed separately via install_airflow.sh
+   
 
       # API serving
       - fastapi==0.104.1
