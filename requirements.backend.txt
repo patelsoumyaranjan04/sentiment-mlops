@@ -1,7 +1,5 @@
-# Pin typing-extensions first — resolves tensorflow vs fastapi conflict
 typing-extensions
 
-# Core ML — tensorflow-cpu keeps Docker image smaller, no GPU needed for inference
 tensorflow-cpu==2.15.0
 scikit-learn
 numpy
