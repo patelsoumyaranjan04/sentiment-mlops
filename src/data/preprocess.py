@@ -36,10 +36,7 @@ lemmatizer = WordNetLemmatizer()
 STOP_WORDS = set(stopwords.words("english"))
 
 class SimpleTokenizer:
-    """
-    Pure Python tokenizer — identical behavior to Keras Tokenizer.
-    No tensorflow dependency. Airflow-safe.
-    """
+ 
     def __init__(self):
         self.word_index = {}
         self.index_word = {}
